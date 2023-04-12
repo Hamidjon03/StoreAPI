@@ -4,12 +4,12 @@ const getAllProductsStatic = async (req, res) => {
 
   // const search = 'ab'
 
-  const products = await Product.find({}).sort('-name price')
+  const products = await Product.find({price: {$gt: 30}}).sort('price').select('price')
   res.status(200).json({products, nbHits: products.length})
 }
 
 const getAllProducts = async (req, res) => {
-  const {featured, company, name, sort, fields} = req.query
+  const {featured, company, name, sort, fields, numericFilters} = req.query
   const queryObj = {}
 
   if(featured){
@@ -24,7 +24,20 @@ const getAllProducts = async (req, res) => {
     queryObj.name = {$regex: name, $options: 'i'}
   }
 
-  // console.log(queryObj)
+  if (numericFilters){
+    const operatorMap ={
+      '>': '$gt',
+      '>=': '$gte',
+      '=': '$eq',
+      '<': '$lt',
+      '<=': '$lte',
+    }
+    const regEx = /\b(<|>|>=|=|<|<=)\b/g
+    let filters = numericFilters.replace(regEx,(match) => `-${operatorMap[match]}-`)
+    console.log(filters)
+  }
+
+  console.log(queryObj)
 
   let result = Product.find(queryObj)
   //sort
@@ -45,7 +58,7 @@ const getAllProducts = async (req, res) => {
   const skip = (page - 1 ) * limit
 
   result = result.skip(skip).limit(limit)
-  
+
 
   const products = await result
   res.status(200).json({products, nbHits: products.length})
